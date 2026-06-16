@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mi rutina de piel</title>
+<style>
+  :root{
+    --bg: #FBF8F3;
+    --surface: #FFFFFF;
+    --ink: #2B2620;
+    --ink-soft: #6E6557;
+    --line: rgba(43,38,32,0.12);
+    --am: #C97A3D;
+    --am-soft: #FBEADD;
+    --pm: #3D5A6C;
+    --pm-soft: #E4ECEF;
+    --flare: #B5483F;
+    --flare-soft: #F8E6E3;
+    --ok: #4A7A52;
+    --radius: 14px;
+    --serif: 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    -webkit-font-smoothing: antialiased;
+    padding-bottom: 3rem;
+  }
+  .wrap { max-width: 480px; margin: 0 auto; padding: 1.5rem 1.25rem; }
+
+  header { margin-bottom: 1.5rem; }
+  .eyebrow { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); margin: 0 0 4px; }
+  h1 { font-family: var(--serif); font-size: 26px; font-weight: 400; margin: 0; }
+  .date-row { display:flex; justify-content:space-between; align-items:baseline; margin-top: 6px; }
+  .date-row span:first-child { font-size: 14px; color: var(--ink-soft); text-transform: capitalize; }
+
+  .streak {
+    display:flex; align-items:center; gap:6px;
+    background: var(--surface); border:1px solid var(--line);
+    border-radius: 999px; padding: 4px 12px; font-size: 13px;
+  }
+  .streak b { font-weight: 600; }
+
+  .flare-toggle {
+    display:flex; align-items:center; gap:10px;
+    background: var(--surface); border:1px solid var(--line);
+    border-radius: var(--radius); padding: 12px 14px; margin-bottom: 1.5rem;
+    font-size: 14px; cursor: pointer;
+  }
+  .flare-toggle.active { background: var(--flare-soft); border-color: var(--flare); }
+  .flare-toggle input { width: 18px; height: 18px; accent-color: var(--flare); flex-shrink:0; }
+
+  section { margin-bottom: 1.75rem; }
+  .section-head { display:flex; justify-content:space-between; align-items:baseline; margin-bottom: 10px; }
+  .section-head h2 { font-family: var(--serif); font-size: 18px; font-weight: 400; margin: 0; display:flex; align-items:center; gap:8px; }
+  .section-head .count { font-size: 13px; color: var(--ink-soft); }
+  .am h2 { color: var(--am); }
+  .pm h2 { color: var(--pm); }
+  .pm-label { font-size: 13px; color: var(--ink-soft); margin: -4px 0 10px; }
+
+  .bar { height: 3px; background: var(--line); border-radius: 2px; margin-bottom: 12px; overflow:hidden; }
+  .bar-fill { height: 100%; border-radius: 2px; transition: width 0.25s ease; }
+  .am .bar-fill { background: var(--am); }
+  .pm .bar-fill { background: var(--pm); }
+
+  .step {
+    display:flex; align-items:flex-start; gap:12px;
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 10px; padding: 12px 14px; margin-bottom: 8px;
+    cursor: pointer; transition: background 0.15s, opacity 0.15s;
+  }
+  .step.done { opacity: 0.55; }
+  .step input { width: 18px; height: 18px; margin-top: 1px; flex-shrink: 0; }
+  .am .step input { accent-color: var(--am); }
+  .pm .step input { accent-color: var(--pm); }
+  .step span { font-size: 14.5px; line-height: 1.45; }
+  .step.done span { text-decoration: line-through; color: var(--ink-soft); }
+
+  .reset-btn {
+    width: 100%; padding: 12px; border-radius: 10px;
+    border: 1px solid var(--line); background: var(--surface);
+    color: var(--ink-soft); font-size: 13.5px; cursor: pointer;
+  }
+  .reset-btn:active { background: var(--bg); }
+
+  .footnote {
+    margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid var(--line);
+    font-size: 12px; color: var(--ink-soft); line-height: 1.6;
+  }
+
+  .week-view { margin-top: 0.5rem; }
+  .week-grid { display:flex; gap:6px; margin-top: 8px; }
+  .week-day {
+    flex:1; text-align:center; padding: 8px 0; border-radius: 8px;
+    background: var(--surface); border: 1px solid var(--line); font-size: 11px;
+  }
+  .week-day .d { color: var(--ink-soft); text-transform: uppercase; margin-bottom:4px; display:block; }
+  .week-day .dot { width:6px; height:6px; border-radius:50%; margin: 0 auto; background: var(--line); }
+  .week-day.complete .dot { background: var(--ok); }
+  .week-day.today { border-color: var(--ink); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow">Cuidado de piel diario</p>
+    <h1>Mi rutina</h1>
+    <div class="date-row">
+      <span id="todayLabel"></span>
+      <div class="streak"><span>🔥</span><b id="streakCount">0</b>&nbsp;días seguidos</div>
+    </div>
+  </header>
+
+  <div class="flare-toggle" id="flareToggle">
+    <input type="checkbox" id="flareCheck">
+    <span>Hoy tengo rojez o ardor activo (rutina suave, sin ácidos)</span>
+  </div>
+
+  <section class="am">
+    <div class="section-head">
+      <h2>☀️ Mañana</h2>
+      <span class="count" id="amCount">0/6</span>
+    </div>
+    <div class="bar"><div class="bar-fill" id="amBar" style="width:0%"></div></div>
+    <div id="amSteps"></div>
+  </section>
+
+  <section class="pm">
+    <div class="section-head">
+      <h2>🌙 Noche</h2>
+      <span class="count" id="pmCount">0/4</span>
+    </div>
+    <p class="pm-label" id="pmLabel"></p>
+    <div class="bar"><div class="bar-fill" id="pmBar" style="width:0%"></div></div>
+    <div id="pmSteps"></div>
+  </section>
+
+  <button class="reset-btn" id="resetBtn">Reiniciar el día de hoy</button>
+
+  <div class="week-view">
+    <div class="section-head" style="margin-top:1.75rem;">
+      <h2 style="font-family:var(--sans); font-size:14px; color:var(--ink-soft); font-weight:600;">Esta semana</h2>
+    </div>
+    <div class="week-grid" id="weekGrid"></div>
+  </div>
+
+  <div class="footnote">
+    Productos: CeraVe Control Imperfecciones, Isdin Vital Eyes, Nutradeica Gel Crema, Suero Ácido Salicílico 2% (The Ordinary), Azelaic Acid 10% (The Ordinary), Aceite Anua, Vitamina C, Niacinamida 10%, Crema Ácido Glicólico A'PIEU, Retinol 0.2%.<br><br>
+    Con rosácea diagnosticada: si hay rojez o ardor activo, usa siempre el modo suave de arriba. Protector solar es obligatorio todos los días sin excepción. Esta rutina no reemplaza el seguimiento con tu dermatólogo.
+  </div>
+
+</div>
+
+<script>
+const DAY_NAMES = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+const DAY_SHORT = ['DOM','LUN','MAR','MIÉ','JUE','VIE','SÁB'];
+
+const AM_STEPS = [
+  'Limpiador suave en gel',
+  'Vitamina C',
+  'Niacinamida 10%',
+  'Isdin Vital Eyes (contorno de ojos)',
+  'Nutradeica Gel Crema',
+  'Protector solar SPF 50'
+];
+
+const PM_PLANS = {
+  1: { label: 'Noche ácido salicílico', steps: [
+    'Aceite Anua (doble limpieza, masajear 60 seg, enjuagar)',
+    'Limpiador en gel',
+    'Ácido Salicílico 2% solo en nariz y zona T',
+    'Nutradeica Gel Crema'
+  ]},
+  2: { label: 'Noche ácido glicólico', steps: [
+    'Aceite Anua (doble limpieza)',
+    'Limpiador en gel',
+    "Crema Glicólico A'PIEU solo en zona T / manchas, evitar mejillas",
+    'Nutradeica Gel Crema'
+  ]},
+  3: { label: 'Noche Azelaic', steps: [
+    'Aceite Anua (doble limpieza)',
+    'Limpiador en gel',
+    'Azelaic Acid 10% en toda la cara, incluidas mejillas',
+    'Nutradeica Gel Crema'
+  ]},
+  4: { label: 'Noche ácido salicílico', steps: [
+    'Aceite Anua (doble limpieza)',
+    'Limpiador en gel',
+    'Ácido Salicílico 2% solo en zona T',
+    'Nutradeica Gel Crema'
+  ]},
+  5: { label: 'Noche retinol', steps: [
+    'Aceite Anua (doble limpieza)',
+    'Limpiador en gel',
+    'Esperar 20 min, piel seca',
+    'Retinol 0.2% solo en zona T / manchas, evitar mejillas',
+    'Nutradeica Gel Crema'
+  ]},
+  6: { label: 'Noche Azelaic', steps: [
+    'Aceite Anua (doble limpieza)',
+    'Limpiador en gel',
+    'Azelaic Acid 10% en toda la cara',
+    'Nutradeica Gel Crema'
+  ]},
+  0: { label: 'Noche descanso', steps: [
+    'Aceite Anua (doble limpieza)',
+    'Limpiador en gel',
+    'Nutradeica Gel Crema'
+  ]}
+};
+const FLARE_STEPS = [
+  'Aceite Anua (doble limpieza)',
+  'Limpiador en gel',
+  'Nutradeica Gel Crema'
+];
+
+const STORAGE_KEY = 'skincareRoutineData';
+
+function todayKey(d) {
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : { days: {} };
+  } catch(e) { return { days: {} }; }
+}
+
+function saveData(data) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+let data = loadData();
+const today = new Date();
+const key = todayKey(today);
+if (!data.days[key]) data.days[key] = { am: [], pm: [], flare: false };
+
+function getPmSteps(dateObj, rec) {
+  if (rec.flare) return FLARE_STEPS;
+  return PM_PLANS[dateObj.getDay()].steps;
+}
+
+function isDayComplete(dateObj) {
+  const k = todayKey(dateObj);
+  const rec = data.days[k];
+  if (!rec) return false;
+  const pmSteps = getPmSteps(dateObj, rec);
+  return rec.am.length === AM_STEPS.length && rec.pm.length === pmSteps.length;
+}
+
+function computeStreak() {
+  let streak = 0;
+  let cursor = new Date(today);
+  while (true) {
+    if (isDayComplete(cursor)) {
+      streak++;
+      cursor.setDate(cursor.getDate() - 1);
+    } else break;
+  }
+  return streak;
+}
+
+function render() {
+  const rec = data.days[key];
+  const dow = today.getDay();
+  const flare = rec.flare;
+  const pmSteps = getPmSteps(today, rec);
+  const pmLabel = flare ? 'Modo rojez activa: solo limpieza e hidratación' : PM_PLANS[dow].label;
+
+  document.getElementById('todayLabel').textContent =
+    DAY_NAMES[dow] + ', ' + today.getDate() + ' de ' + today.toLocaleDateString('es-ES', { month: 'long' });
+
+  const flareToggleEl = document.getElementById('flareToggle');
+  flareToggleEl.classList.toggle('active', flare);
+  document.getElementById('flareCheck').checked = flare;
+
+  document.getElementById('pmLabel').textContent = pmLabel;
+
+  renderSteps('amSteps', AM_STEPS, rec.am, 'am');
+  renderSteps('pmSteps', pmSteps, rec.pm, 'pm');
+
+  document.getElementById('amCount').textContent = rec.am.length + '/' + AM_STEPS.length;
+  document.getElementById('pmCount').textContent = rec.pm.length + '/' + pmSteps.length;
+  document.getElementById('amBar').style.width = Math.round((rec.am.length / AM_STEPS.length) * 100) + '%';
+  document.getElementById('pmBar').style.width = Math.round((rec.pm.length / pmSteps.length) * 100) + '%';
+
+  document.getElementById('streakCount').textContent = computeStreak();
+
+  renderWeek();
+}
+
+function renderSteps(containerId, steps, doneArr, period) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  steps.forEach((stepText, i) => {
+    const isDone = doneArr.includes(i);
+    const row = document.createElement('label');
+    row.className = 'step' + (isDone ? ' done' : '');
+    row.innerHTML = '<input type="checkbox" ' + (isDone ? 'checked' : '') + ' data-period="' + period + '" data-idx="' + i + '"><span>' + stepText + '</span>';
+    container.appendChild(row);
+  });
+  container.querySelectorAll('input').forEach(cb => {
+    cb.addEventListener('change', (e) => {
+      const p = e.target.getAttribute('data-period');
+      const idx = parseInt(e.target.getAttribute('data-idx'));
+      const arr = data.days[key][p];
+      const pos = arr.indexOf(idx);
+      if (e.target.checked && pos === -1) arr.push(idx);
+      if (!e.target.checked && pos !== -1) arr.splice(pos, 1);
+      saveData(data);
+      render();
+    });
+  });
+}
+
+function renderWeek() {
+  const grid = document.getElementById('weekGrid');
+  grid.innerHTML = '';
+  const startOfWeek = new Date(today);
+  startOfWeek.setDate(today.getDate() - today.getDay());
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(startOfWeek);
+    d.setDate(startOfWeek.getDate() + i);
+    const isToday = todayKey(d) === todayKey(today);
+    const isFuture = d > today;
+    const complete = !isFuture && isDayComplete(d);
+    const cell = document.createElement('div');
+    cell.className = 'week-day' + (complete ? ' complete' : '') + (isToday ? ' today' : '');
+    cell.innerHTML = '<span class="d">' + DAY_SHORT[d.getDay()] + '</span><div class="dot"></div>';
+    grid.appendChild(cell);
+  }
+}
+
+document.getElementById('flareCheck').addEventListener('change', (e) => {
+  data.days[key].flare = e.target.checked;
+  data.days[key].pm = [];
+  saveData(data);
+  render();
+});
+
+document.getElementById('flareToggle').addEventListener('click', (e) => {
+  if (e.target.tagName !== 'INPUT') {
+    const cb = document.getElementById('flareCheck');
+    cb.checked = !cb.checked;
+    cb.dispatchEvent(new Event('change'));
+  }
+});
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  data.days[key].am = [];
+  data.days[key].pm = [];
+  saveData(data);
+  render();
+});
+
+render();
+</script>
+</body>
+</html>
